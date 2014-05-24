@@ -25,6 +25,5 @@ if [ $IS_SUDO ]; then
 
     parallel -j ${NUM_PARALEL:-1} "echo $PASSWORD | ssh -t y_uuki@{} $COMMAND" ::: $HOSTS
 else
-    COMMAND="sh -c 'LANG=c $COMMAND'"
     parallel -j ${NUM_PARALEL:-1} ssh -t y_uuki@{} $COMMAND ::: $HOSTS
 fi
