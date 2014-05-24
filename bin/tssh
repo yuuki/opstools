@@ -1,0 +1,30 @@
+#!/bin/bash
+
+hosts=("$@")
+
+pane_num=${#hosts[@]}
+session_name="tmux-ssh-$$"
+
+tmux start-server
+tmux new-session -d -n tmux-ssh-window -s $session_name
+
+current_pane=0
+while [ $current_pane -lt $pane_num ]; do
+    if [ $(( $current_pane % 20 )) ]; then
+        tmux split-window -h -t $session_name
+    else
+        tmux split-window -v -t $session_name
+    fi
+    host=${hosts[$current_pane]}
+    tmux send-keys "ssh $USER@$host" C-m
+    tmux select-layout tiled 1>/dev/null
+    current_pane=$(( $current_pane + 1 ))
+done
+tmux kill-pane -t 0
+
+tmux select-window -t $session_name
+tmux select-pane -t 0
+tmux select-layout -t $session_name tiled
+tmux set-window-option synchronize-panes on
+echo "tmux attach-session -t $session_name"
+tmux attach-session -t $session_name
