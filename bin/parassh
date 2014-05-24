@@ -1,0 +1,30 @@
+#!/bin/bash
+
+while getopts "c:sj:" opt; do
+    case $opt in
+        c ) COMMAND=$OPTARG
+            ;;
+        s ) IS_SUDO=true
+            ;;
+        j ) NUM_PARALEL=$OPTARG
+            ;;
+    esac
+done
+shift $(($OPTIND - 1))
+
+HOSTS=$@
+
+if [ $IS_SUDO ]; then
+    COMMAND="sudo -S -p \'\' $COMMAND"
+
+    echo -n '[sudo] password via SSH: ' 1>&2
+    stty -echo
+    read PASSWORD
+    stty echo
+    echo ''
+
+    parallel -j ${NUM_PARALEL:-1} "echo $PASSWORD | ssh -t y_uuki@{} $COMMAND" ::: $HOSTS
+else
+    COMMAND="sh -c 'LANG=c $COMMAND'"
+    parallel -j ${NUM_PARALEL:-1} ssh -t y_uuki@{} $COMMAND ::: $HOSTS
+fi
