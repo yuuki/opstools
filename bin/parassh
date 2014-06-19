@@ -23,7 +23,7 @@ if [ $IS_SUDO ]; then
     stty echo
     echo ''
 
-    parallel -j ${NUM_PARALEL:-1} "echo $PASSWORD | ssh -t y_uuki@{} $COMMAND" ::: $HOSTS
+    parallel -j ${NUM_PARALEL:-1} "echo $PASSWORD | ssh -t $USER@{} $COMMAND" ::: $HOSTS
 else
     parallel -j ${NUM_PARALEL:-1} ssh -t y_uuki@{} $COMMAND ::: $HOSTS
 fi
