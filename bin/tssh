@@ -19,4 +19,5 @@ for host in ${hosts[@]}; do
 done
 
 tmux set-window-option -t $session_name synchronize-panes on
+tmux select-pane -t 0
 tmux attach-session -t $session_name
