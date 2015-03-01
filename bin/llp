@@ -1,0 +1,164 @@
+#!/usr/bin/env perl
+package main;
+use strict;
+use warnings;
+App::llp->new(@ARGV)->run;
+
+package App::llp;
+use strict;
+use warnings;
+
+use Getopt::Long qw(:config posix_default no_ignore_case bundling auto_help);
+use Pod::Usage qw(pod2usage);
+
+=head1 NAME
+
+llp -
+
+=head1 DESCRIPTION
+
+LTSV Log Parser
+
+=head1 SYNOPSIS
+
+    % llp - stdin
+
+    -l[--list-keys]             List ltsv keys
+    -s[--select] key1,key2,...  Select element by specified keys
+    -g[--groupby] key           Group element by specified keys
+
+    -h[--help]                  Show this help
+
+=head1 HINTS
+
+    % cat access.ltsv.log | llp -k
+    host
+    forwardedfor
+    req
+    status
+    size
+    referer
+    ua
+    ...
+
+    % cat access.ltsv.log | llp --select host,req
+    host:192.168.0.10   req:GET /login
+    host:192.168.0.11   req:GET /login
+    host:192.168.0.12   req:GET /logout
+    ...
+
+    % cat access.ltsv.log | llp --groupby host
+    host:192.168.0.10   count:500
+    host:192.168.0.11   count:400
+    host:192.168.0.12   count:300
+    ...
+
+=cut
+
+sub new {
+    my ($class, @argv) = @_;
+
+    my $opt = $class->parse_options(@argv);
+    bless $opt, $class;
+}
+
+sub parse_options {
+    my ($class, @argv) = @_;
+
+    my %opt = (
+        help => 0,
+        list_keys => 0,
+        select => [],
+        groupby => undef,
+    );
+
+    local @ARGV = @argv;
+
+    GetOptions(
+        'h|help'       => sub { $opt{help} = 1 },
+        'l|list-keys'  => sub { $opt{list_keys} = 1},
+        's|select=s@'  => $opt{select},
+        'g|groupby=s'  => \$opt{groupby},
+    ) or pod2usage(1);
+
+    return \%opt;
+}
+
+sub run {
+    my ($self) = @_;
+
+    if ($self->{help}) {
+        pod2usage(1);
+    }
+
+    if ($self->{list_keys}) {
+        my $line = <STDIN>; # first line
+        _list_keys($line);
+        return;
+    }
+
+    if (my @fields = @{$self->{select}}) {
+        while (my $line = <STDIN>) {
+            _select($line, \@fields);
+        }
+        return;
+    }
+
+    if (my $key = $self->{groupby}) {
+        my $count_by_value = {};
+        while (my $line = <STDIN>) {
+            my $value = _value_by_key($line, $key);
+            $count_by_value->{$value} ||= 0;
+            $count_by_value->{$value} += 1;
+        }
+        my @values = keys %$count_by_value;
+        for my $value (sort { $count_by_value->{$b} <=> $count_by_value->{$a} } @values) {
+            my $count = $count_by_value->{$value};
+            print "$key:$value\tcount:$count\n";
+        }
+        return;
+    }
+}
+
+sub _list_keys {
+    my ($line) = @_;
+
+    my @items = split("\t", $line);
+    my @keys = map { my ($k, $v) = split(':', $_); $k } @items;
+    unless (@keys) {
+        warn "Not found ltsv key";
+        exit 1;
+    }
+
+    print "$_\n" for @keys;
+}
+
+sub _select {
+    my ($line, $fields) = @_;
+
+    my @items = split("\t", $line);
+    for my $item (@items) {
+        my ($key, $value) = split(':', $item);
+        if (grep { $_ eq $key } @$fields) {
+            print "$key:$value\t";
+        }
+    }
+
+    print "\n";
+}
+
+sub _value_by_key {
+    my ($line, $field) = @_;
+
+    my @items = split("\t", $line);
+    for my $item (@items) {
+        my ($key, $value) = split(':', $item);
+        if ($key eq $field) {
+            return $value;
+        }
+    }
+}
+
+1;
+
+__END__
