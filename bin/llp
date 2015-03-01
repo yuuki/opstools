@@ -70,6 +70,7 @@ sub parse_options {
         list_keys => 0,
         select => [],
         groupby => undef,
+        limit => 10,
     );
 
     local @ARGV = @argv;
@@ -79,6 +80,7 @@ sub parse_options {
         'l|list-keys'  => sub { $opt{list_keys} = 1},
         's|select=s@'  => $opt{select},
         'g|groupby=s'  => \$opt{groupby},
+        'l|limit=i'  => \$opt{limit},
     ) or pod2usage(1);
 
     return \%opt;
@@ -112,7 +114,8 @@ sub run {
             $count_by_value->{$value} += 1;
         }
         my @values = keys %$count_by_value;
-        for my $value (sort { $count_by_value->{$b} <=> $count_by_value->{$a} } @values) {
+        my @sorted_values = sort { $count_by_value->{$b} <=> $count_by_value->{$a} } @values;
+        for my $value (splice(@sorted_values, 0, $self->{limit})) {
             my $count = $count_by_value->{$value};
             print "$key:$value\tcount:$count\n";
         }
