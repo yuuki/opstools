@@ -2,9 +2,9 @@
 package main;
 use strict;
 use warnings;
-App::llp->new(@ARGV)->run;
+App::LLQ->new(@ARGV)->run;
 
-package App::llp;
+package App::LLQ;
 use strict;
 use warnings;
 
@@ -13,15 +13,15 @@ use Pod::Usage qw(pod2usage);
 
 =head1 NAME
 
-llp -
+llq - LTSV Log Query
 
 =head1 DESCRIPTION
 
-LTSV Log Parser
+LTSV Log Query
 
 =head1 SYNOPSIS
 
-    % llp - stdin
+    % llq - stdin
 
     -l[--list-keys]             List ltsv keys
     -s[--select] key1,key2,...  Select element by specified keys
@@ -31,7 +31,7 @@ LTSV Log Parser
 
 =head1 HINTS
 
-    % cat access.ltsv.log | llp -k
+    % cat access.ltsv.log | llq -k
     host
     forwardedfor
     req
@@ -41,13 +41,13 @@ LTSV Log Parser
     ua
     ...
 
-    % cat access.ltsv.log | llp --select host,req
+    % cat access.ltsv.log | llq --select host,req
     host:192.168.0.10   req:GET /login
     host:192.168.0.11   req:GET /login
     host:192.168.0.12   req:GET /logout
     ...
 
-    % cat access.ltsv.log | llp --groupby host
+    % cat access.ltsv.log | llq --groupby host
     host:192.168.0.10   count:500
     host:192.168.0.11   count:400
     host:192.168.0.12   count:300
