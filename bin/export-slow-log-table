@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# borrow https://github.com/billkarwin/bk-tools/blob/master/export-slow-log-table
+
+cat <<'GO' | mysql --raw --skip-column-names --quick --silent --no-auto-rehash --compress $*
+SELECT CONCAT(
+'# Time: ', DATE_FORMAT(start_time, '%y%m%d %H:%i:%s'), CHAR(10),
+'# User@Host: ', user_host, CHAR(10),
+'# Query_time: ', TIME_TO_SEC(query_time),
+'  Lock_time: ', TIME_TO_SEC(lock_time),
+' Rows_sent: ', rows_sent,
+'  Rows_examined: ', rows_examined, CHAR(10),
+'SET timestamp=', UNIX_TIMESTAMP(start_time), ';', CHAR(10),
+IF(FIND_IN_SET(sql_text, 'Sleep,Quit,Init DB,Query,Field List,Create DB,Drop DB,Refresh,Shutdown,Statistics,Processlist,Connect,Kill,Debug,Ping,Time,Delayed insert,Change user,Binlog Dump,Table Dump,Connect Out,Register Slave,Prepare,Execute,Long Data,Close stmt,Reset stmt,Set option,Fetch,Daemon,Error'),
+  CONCAT('# administrator command: ', sql_text), sql_text),
+';'
+) AS `# slow-log`
+FROM `mysql`.`slow_log` WHERE start_time >= "00:00:01";
+GO
+echo "#"
