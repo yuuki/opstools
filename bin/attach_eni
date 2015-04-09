@@ -1,0 +1,78 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOS
+Usage: $0 [options]
+    [-k ACCESS_KEY]
+    [-s SECRET_KEY]
+    [-r REGION]
+    [-n ENI_ID] (required)
+    [-d DEVICE_INDEX]
+    [-i INSTANCE_ID]
+    [-t SLEEP_SEC]
+EOS
+}
+
+while getopts "k:s:r:n:d:i:h" opt; do
+  case $opt in
+      h) usage && exit 0 ;;
+      k) ACCESS_KEY=$OPTARG ;;
+      s) SECRET_KEY=$OPTARG ;;
+      r) REGION=$OPTARG ;;
+      n) ENI_ID=$OPTARG ;;
+      d) DEVICE_INDEX=$OPTARG ;;
+      i) INSTANCE_ID=$OPTARG ;;
+      t) SLEEP_SEC=$OPTARG ;;
+  esac
+done
+shift $(($OPTIND - 1))
+
+is_eni_attached() {
+    ret=$(aws ec2 describe-network-interfaces --network-interface-ids $ENI_ID --filter "Name=attachment.instance-id, Values=$INSTANCE_ID" --output json | grep $INSTANCE_ID | wc -l)
+    [ $ret -ne 0 ] && return 0
+    return 1
+}
+
+fetch_instance_id_attached_eni() {
+    local current_eni_instance_id=$(aws ec2 describe-network-interfaces --network-interface-ids eni-28415b5f --output json | grep \"InstanceId\" | sed -e 's/'.*\"InstanceId\"':\s\"\(.*\)\"\,\s$/\1/')
+    echo $current_eni_instance_id
+}
+
+start_eni() {
+    is_eni_attached; [ $? -eq 0 ] && return 0
+    stop_eni; [ $? -ne 0 ] && return 0
+
+    aws ec2 attach-network-interface --network-interface-id $ENI_ID --instance-id $INSTANCE_ID --device-index $DEVICE_INDEX
+    sleep 1
+    return 0
+}
+
+stop_eni() {
+    current_eni_instance_id=$(fetch_instance_id_attached_eni)
+    attachment_id=$(aws ec2 describe-network-interfaces --network-interface-ids $ENI_ID --filter "Name=attachment.instance-id, Values=${current_eni_instance_id}" --output json | grep \"AttachmentId\": | sed -e 's/'.*\"AttachmentId\"':\s\"\(.*\)\"\,\s$/\1/')
+    aws ec2 detach-network-interface --attachment-id ${attachment_id}
+    sleep $SLEEP_SEC
+    return 0
+}
+
+main() {
+    [ -z $ENI_ID ] && {
+        echo "ENI_ID required" 1>&2
+        usage && exit 1
+    }
+
+    [ -z $ACCESS_KEY ] || export AWS_ACCESS_KEY_ID=$ACCESS_KEY
+    [ -z $SECRET_KEY ] || export AWS_SECRET_ACCESS_KEY=$SECRET_KEY
+
+    [ -z $REGION ] && REGION=$(wget -q -O - http://169.254.169.254/latest/meta-data/placement/availability-zone)
+    export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:=${REGION/%?/}}
+
+    [ -z $DEVICE_INDEX ] && DEVICE_INDEX=1
+    [ -z $INSTANCE_ID ] && INSTANCE_ID=$(wget -q -O - http://169.254.169.254/latest/meta-data/instance-id)
+
+    [ -z $SLEEP_SEC ] && SLEEP_SEC=10
+
+    start_eni
+}
+
+main
