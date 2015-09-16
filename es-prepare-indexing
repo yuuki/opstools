@@ -38,8 +38,8 @@ function apply {
     echo "index.refresh_interval => $REFRESH_INTERVAL"
     es_query 'PUT' "$INDEX_NAME/_settings" "{ \"index\" : {\"refresh_interval\" : \"$REFRESH_INTERVAL\" } }"
 
-    echo 'translog.flush_threshold_size => 1g'
-    es_query 'PUT' "$INDEX_NAME/_settings" '{ "index" : {"translog.flush_threshold_size" : "1g" } }'
+    echo "translog.flush_threshold_size => $FLUSH_THRESHOLD_SIZE"
+    es_query 'PUT' "$INDEX_NAME/_settings" "{ \"index\" : {\"translog.flush_threshold_size\" : \"$FLUSH_THRESHOLD_SIZE\" } }"
 
     echo 'indices.store.throttle.type => "none"'
     es_query 'PUT' "_cluster/settings"  '{ "transient" : {"indices.store.throttle.type" : "none" } }'
@@ -52,6 +52,7 @@ HOST='localhost'
 PORT='9200'
 NUMBER_OF_REPLICAS=0
 REFRESH_INTERVAL='30s'
+FLUSH_THRESHOLD_SIZE='1g'
 
 while [ $# -gt 0 ]; do
     case ${1} in
@@ -82,6 +83,11 @@ while [ $# -gt 0 ]; do
 
         --refresh-interval|-i)
             REFRESH_INTERVAL=${2}
+            shift
+            ;;
+
+        --flush-threshold-size|-f)
+            FLUSH_THRESHOLD_SIZE=${2}
             shift
             ;;
 
