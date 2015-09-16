@@ -1,0 +1,96 @@
+#!/bin/bash -e
+
+# https://www.elastic.co/guide/en/elasticsearch/guide/current/indexing-performance.html
+# es-prepare-indexing -h serveres001 apply
+
+function usage {
+    cat <<EOF
+$(basename ${0}) is a tool for increasing performance of Elasticsearch indexing
+
+Usage:
+    $(basename ${0}) [command] [<options>]
+
+Command:
+    apply             update appropriate settings for better indexing performance
+
+    reposite          update default settings
+
+Options:
+query 
+    --version, -v     print $(basename ${0}) version
+    --help, -h        print this
+EOF
+}
+
+function es_query {
+    local method=$1
+    local path=$2
+    local query=$3
+
+    echo "curl -s -X$method http://$HOST:$PORT/$path -d '$query'"
+    curl -s -X$method http://$HOST:$PORT/$path -d "$query"
+}
+
+function apply {
+    echo 'number_of_replicas => 0'
+    es_query 'PUT' "$INDEX_NAME/_settings" '{ "index" : {"number_of_replicas" : 0 } }'
+
+    echo 'index.refresh_interval => 30s'
+    es_query 'PUT' "$INDEX_NAME/_settings" '{ "index" : {"refresh_interval" : "30s" } }'
+
+    echo 'translog.flush_threshold_size => 1g'
+    es_query 'PUT' "$INDEX_NAME/_settings" '{ "index" : {"translog.flush_threshold_size" : "1g" }'
+
+    echo 'indices.store.throttle.type => "none"'
+    es_query 'PUT' "_cluster/settings"  '{ "transient" : {"indices.store.throttle.type" : "none" } }'
+
+    echo
+}
+
+
+HOST='localhost'
+PORT='9200'
+
+while [ $# -gt 0 ]; do
+    case ${1} in
+
+        --debug|-d)
+            set -x
+            ;;
+
+        --host|-h)
+            HOST=${2}
+            shift
+            ;;
+
+        --port|-p)
+            PORT=${2}
+            shift
+            ;;
+
+        --index|-i)
+            INDEX_NAME=${2}
+            shift
+            ;;
+
+        apply)
+            apply
+            ;;
+
+        unapply)
+            unapply
+            ;;
+
+        help|--help|-h)
+            usage
+            ;;
+
+        *)
+            echo "[ERROR] Invalid subcommand '${1}'"
+            usage
+            exit 1
+            ;;
+    esac
+    shift
+done
+
