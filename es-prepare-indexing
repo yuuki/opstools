@@ -32,8 +32,8 @@ function es_query {
 }
 
 function apply {
-    echo 'number_of_replicas => 0'
-    es_query 'PUT' "$INDEX_NAME/_settings" '{ "index" : {"number_of_replicas" : 0 } }'
+    echo "number_of_replicas => $NUMBER_OF_REPLICAS"
+    es_query 'PUT' "$INDEX_NAME/_settings" "{ \"index\" : {\"number_of_replicas\" : $NUMBER_OF_REPLICAS } }"
 
     echo 'index.refresh_interval => 30s'
     es_query 'PUT' "$INDEX_NAME/_settings" '{ "index" : {"refresh_interval" : "30s" } }'
@@ -50,6 +50,7 @@ function apply {
 
 HOST='localhost'
 PORT='9200'
+NUMBER_OF_REPLICAS=0
 
 while [ $# -gt 0 ]; do
     case ${1} in
@@ -70,6 +71,11 @@ while [ $# -gt 0 ]; do
 
         --index|-i)
             INDEX_NAME=${2}
+            shift
+            ;;
+
+        --replicas|-r)
+            NUMBER_OF_REPLICAS=${2}
             shift
             ;;
 
