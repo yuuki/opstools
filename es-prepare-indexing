@@ -39,7 +39,7 @@ function apply {
     es_query 'PUT' "$INDEX_NAME/_settings" '{ "index" : {"refresh_interval" : "30s" } }'
 
     echo 'translog.flush_threshold_size => 1g'
-    es_query 'PUT' "$INDEX_NAME/_settings" '{ "index" : {"translog.flush_threshold_size" : "1g" }'
+    es_query 'PUT' "$INDEX_NAME/_settings" '{ "index" : {"translog.flush_threshold_size" : "1g" } }'
 
     echo 'indices.store.throttle.type => "none"'
     es_query 'PUT' "_cluster/settings"  '{ "transient" : {"indices.store.throttle.type" : "none" } }'
