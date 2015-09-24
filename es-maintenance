@@ -37,30 +37,28 @@ function es_query {
 function es_start {
     ssh -t $HOST 'sudo service elasticsearch start'
 
-    echo
     echo "Sleeping... 30sec"
     sleep 30
 
-    echo
     echo "Enable index allocation"
     es_query 'PUT' '_cluster/settings' "{ \"transient\" : {\"cluster.routing.allocation.enable\" : \"all\" } }"
-    echo
 
+    echo
     echo "$HOST started"
 }
 
 function es_stop {
-    echo "Disable index allocation $HOST"
     echo
+    echo "Disable index allocation $HOST"
     es_query 'PUT' '_cluster/settings' "{ \"transient\" : {\"cluster.routing.allocation.enable\" : \"none\" } }"
 
-    echo "Syncing index $HOST"
     echo
-    es_query 'PUT' '_flush/synced' "{}"
+    echo "Syncing index $HOST"
+    es_query 'POST' '_flush/synced' "{}"
     sleep 3
 
-    echo "Shutdown... $HOST"
     echo
+    echo "Shutdown... $HOST"
     es_query 'POST' '_cluster/nodes/_local/_shutdown' "{}"
 
     echo "$HOST stopped"
