@@ -1,0 +1,106 @@
+#!/bin/bash -e
+
+# https://www.elastic.co/guide/en/elasticsearch/guide/current/_rolling_restarts.html
+# Example:
+#   es-maintenance stop -H serveres001
+#   es-maintenance start -H serveres001
+#   es-maintenance restart -H serveres001
+
+function usage {
+    cat <<EOF
+$(basename ${0}) is a tool for restart of Elasticsearch data node
+
+Usage:
+    $(basename ${0}) [command] [<options>]
+
+Command:
+    start
+    stop
+    restart
+
+Options:
+query
+    --version, -v     print $(basename ${0}) version
+    --help, -h        print this
+EOF
+}
+
+function es_query {
+    local method=$1
+    local path=$2
+    local query=$3
+
+    echo "curl -s -X$method http://$HOST:$PORT/$path -d '$query'"
+    curl -s -X$method http://$HOST:$PORT/$path -d "$query"
+}
+
+function es_start {
+    ssh -t $HOST 'sudo service elasticsearch start'
+
+    echo
+    echo "Sleeping... 30sec"
+    sleep 30
+
+    echo
+    echo "Enable index allocation"
+    es_query 'PUT' '_cluster/settings' "{ \"transient\" : {\"cluster.routing.allocation.enable\" : \"all\" } }"
+    echo
+
+    echo "$HOST started"
+}
+
+function es_stop {
+    echo "Disable index allocation $HOST"
+    echo
+    es_query 'PUT' '_cluster/settings' "{ \"transient\" : {\"cluster.routing.allocation.enable\" : \"none\" } }"
+
+    echo "Syncing index $HOST"
+    echo
+    es_query 'PUT' '_flush/synced' "{}"
+    sleep 3
+
+    echo "Shutdown... $HOST"
+    echo
+    es_query 'POST' '_cluster/nodes/_local/_shutdown' "{}"
+
+    echo "$HOST stopped"
+}
+
+function es_restart {
+    es_stop
+
+    echo "Sleeping... 10sec"
+    sleep 10
+
+    es_start
+}
+
+HOST='localhost'
+PORT='9200'
+
+while [ $# -gt 0 ]; do
+    case ${1} in
+        --host|-H)
+            HOST=${2}
+            shift
+            ;;
+        --port|-p)
+            PORT=${2}
+            shift
+            ;;
+        start)
+            es_start
+            ;;
+        stop)
+            es_stop
+            ;;
+        restart)
+            es_restart
+            ;;
+        help|--help|-h)
+            usage
+            ;;
+    esac
+    shift
+done
+
