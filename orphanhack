@@ -1,0 +1,29 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use utf8;
+
+# Usage: orphan.pl COMMAND
+# ex. orphanhack 'tail -f /path/to/log | grep -v 'hoge''
+
+$SIG{TERM} = sub {
+    warn 'caught SIGTERM';
+    my $pgid = getpgrp $$;
+    if ($pgid) {
+        $SIG{TERM} = {}; # avoid to call signal handler twice
+        kill 'TERM', -$pgid; # kill process group
+    }
+    exit 0;
+};
+
+my $COMMAND = $ARGV[0];
+if ($COMMAND eq "") {
+    warn 'required COMMAND';
+    exit 1;
+}
+if (scalar(@ARGV) > 1) {
+    warn 'too many arguments ', join(' ', @ARGV);
+    exit 1;
+}
+
+`$COMMAND`;
