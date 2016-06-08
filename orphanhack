@@ -14,10 +14,7 @@ GetOptions(
 if ($opt_help) {
     pod2usage(0);
 }
-die "no args"
-    unless @ARGV;
-
-if (scalar(@ARGV) < 1) {
+unless (@ARGV) {
     warn 'required COMMAND';
     pod2usage(1);
 }
