@@ -2,12 +2,34 @@
 use strict;
 use warnings;
 use utf8;
+use Pod::Usage;
+use Getopt::Long;
 
-# Usage: orphan.pl COMMAND
-# ex. orphanhack 'tail -f /path/to/log | grep -v 'hoge''
+my $signal = 'TERM';
+my $opt_help;
+GetOptions(
+    's=s' => \$signal,
+    'h'   => \$opt_help,
+) or pod2usage(1);
+if ($opt_help) {
+    pod2usage(0);
+}
+die "no args"
+    unless @ARGV;
 
-$SIG{TERM} = sub {
-    warn 'caught SIGTERM';
+if (scalar(@ARGV) < 1) {
+    warn 'required COMMAND';
+    pod2usage(1);
+}
+
+my @signals = qw(TERM INT HUP CONT QUIT USR1 USR2 STOP);
+unless (grep {$_ eq $signal} @signals) {
+    warn sprintf("invalid signal %s", $signal);
+    pod2usage(1);
+}
+
+my $chld_killer = sub {
+    warn sprintf("caught SIG%s", $signal);
     my $pgid = getpgrp $$;
     if ($pgid) {
         $SIG{TERM} = {}; # avoid to call signal handler twice
@@ -16,14 +38,26 @@ $SIG{TERM} = sub {
     exit 0;
 };
 
-my $COMMAND = $ARGV[0];
-if ($COMMAND eq "") {
-    warn 'required COMMAND';
-    exit 1;
-}
-if (scalar(@ARGV) > 1) {
-    warn 'too many arguments ', join(' ', @ARGV);
-    exit 1;
-}
+$SIG{$signal} = $chld_killer;
 
-`$COMMAND`;
+system @ARGV;
+
+__END__
+
+=head1 NAME
+
+orphanhack - kill processes forked by a command.
+
+=head1 SYNOPSIS
+
+    orphanhack [-s=SIGNAL] -- cmd args...
+
+=head1 DESCRIPTION
+
+kill processes forked by a command.
+
+=head1 AUTHOR
+
+Yuuki Tsubouchi (y_uuki)
+
+=cut
