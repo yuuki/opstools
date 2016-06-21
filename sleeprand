@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use Pod::Usage;
+use Getopt::Long;
+
+my ($opt_help, $offset, $multipler) = (undef, 0, 1);
+GetOptions(
+    'offset|o=s' => \$offset,
+    'multipler|m=s' => \$multipler,
+    'help|h'   => \$opt_help,
+) or pod2usage(1);
+if ($opt_help) {
+    pod2usage(0);
+}
+unless (@ARGV) {
+    warn 'required cmd';
+    pod2usage(1);
+}
+
+sleep($offset + int(rand($multipler)));
+exec @ARGV;
+
+__END__
+
+=head1 NAME
+
+sleeprand - runs a program after sleeping random time
+
+=head1 SYNOPSIS
+
+    sleeprand [-o/--offset SECOND] [-m/--multiplier NUMBER] -- cmd args...
+
+    Example of crontab
+    0 4 * * * root sleephack -m 1800 -- service nscd restart
+
+=head1 DESCRIPTION
+
+sleeprand runs a program after sleeping random time.
+It is useful to wrap crontab command.
+
+=head1 AUTHOR
+
+Yuuki Tsubouchi (y_uuki)
+
+=cut
