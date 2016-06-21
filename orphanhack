@@ -43,15 +43,17 @@ __END__
 
 =head1 NAME
 
-orphanhack - kill processes forked by a command.
+orphanhack - runs program and cleanup processes forked by the program after the program exits.
 
 =head1 SYNOPSIS
 
     orphanhack [-s=SIGNAL] -- cmd args...
 
+    $ orphanhack -s TERM -- tail -F -n0 /var/log/nginx/error.log | grep -v "info" | slackcat --channel general --stream
+
 =head1 DESCRIPTION
 
-kill processes forked by a command.
+orphanhack runs program and cleanup processes forked by the program after the program exits.
 
 =head1 AUTHOR
 
