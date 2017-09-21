@@ -1,0 +1,68 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use Getopt::Long;
+use Pod::Usage;
+use Sys::Hostname;
+
+sub post_ikachan {
+    my ($host, $port, $channel, $message) = @_;
+    my $endpoint = sprintf("http://%s:%s/notice", $host, $port);
+    my $res = `curl --max-time 5 --retry 2 -s -X POST $endpoint -d channel='$channel' -d message='$message'`;
+    if ($? != 0) {
+        die "failed to post to ikachan, host: $host, port: $port, channel: $channel, message: $message";
+    }
+}
+
+my ($opt_help);
+my ($host, $port, $channel) = ('', '4979', '');
+GetOptions(
+    'host=s'    => \$host,
+    'port=s'    => \$port,
+    'channel=s' => \$channel,
+    'help'      => \$opt_help,
+) or pod2usage(1);
+if ($opt_help) {
+    pod2usage(1);
+}
+
+my @cmd = @ARGV;
+if (scalar(@cmd) < 1) {
+    die 'required command';
+}
+if ($host eq '') {
+    die 'required host';
+}
+if ($port eq '') {
+    die 'required port';
+}
+if ($channel eq '') {
+    die 'required channel';
+}
+
+my @out = `@cmd 2>&1`;
+my $exit_code = $?;
+
+if ($exit_code != 0) {
+    my $msg = hostname() . ': ' . join(" ", @out);
+    post_ikachan($host, $port, $channel, $msg);
+}
+__END__
+
+=head1 NAME
+
+ikalog - ikachan log command wrapper
+
+=head1 SYNOPSIS
+
+    ikalog --host HOST --port PORT --channel CHANNEL -- COMMAND
+
+=head1 DESCRIPTION
+
+ikalog post to ikachan if command fails.
+
+=head1 AUTHOR
+
+Yuuki Tsubouchi (y_uuki)
+
+=cut
