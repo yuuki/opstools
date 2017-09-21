@@ -15,11 +15,12 @@ sub post_ikachan {
 }
 
 my ($opt_help);
-my ($host, $port, $channel) = ('', '4979', '');
+my ($host, $port, $channel, $msg_prefix) = ('', '4979', '', '');
 GetOptions(
     'host=s'    => \$host,
     'port=s'    => \$port,
     'channel=s' => \$channel,
+    'message-prefix=s' => \$msg_prefix,
     'help'      => \$opt_help,
 ) or pod2usage(1);
 if ($opt_help) {
@@ -44,7 +45,7 @@ my @out = `@cmd 2>&1`;
 my $exit_code = $?;
 
 if ($exit_code != 0) {
-    my $msg = hostname() . ': ' . join(" ", @out);
+    my $msg = hostname() . ': ' . join(' ', $msg_prefix, @out);
     post_ikachan($host, $port, $channel, $msg);
 }
 __END__
@@ -55,7 +56,7 @@ ikalog - ikachan log command wrapper
 
 =head1 SYNOPSIS
 
-    ikalog --host HOST --port PORT --channel CHANNEL -- COMMAND
+    ikalog --host HOST --port PORT --channel CHANNEL [--message-prefix PREFIX] -- COMMAND
 
 =head1 DESCRIPTION
 
