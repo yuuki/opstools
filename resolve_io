@@ -1,0 +1,22 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use utf8;
+
+unless (@ARGV) {
+    die 'required target DOMAIN';
+}
+my $domain = shift @ARGV;
+if ($domain eq '') {
+    die 'domain is empty'
+}
+
+my @io_servers = sort split("\n", `dig +short +time=3 +tries=3 io. ns`);
+for my $ns (@io_servers) {
+    `dig +noall +comments +time=3 +tries=3 $domain \@$ns | grep -q 'status: NXDOMAIN'`;
+    if ($? == 0) {
+        warn "$ns returns NXDOMAIN!!! for $domain";
+        exit 1;
+    }
+}
+exit 0;
