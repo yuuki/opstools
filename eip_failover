@@ -1,0 +1,96 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use utf8;
+use Getopt::Long;
+use JSON::PP;
+use Pod::Usage;
+
+sub cmd_with_retry3 {
+    my @cmd = @_;
+    my $retry = 3;
+    while ($retry--) {
+        my $ret = system(@cmd);
+        if ($ret == 0) {
+            # success
+            return 0;
+        }
+        sleep 1;
+    }
+    return 1;
+}
+
+sub get_metadata {
+    my $json = `curl -s http://169.254.169.254/latest/dynamic/instance-identity/document`;
+    if ($? != 0) {
+        die "faild to request ec2 metadata\n";
+    }
+    return decode_json($json);
+}
+
+my $opt_attach;
+my $opt_detach;
+my $opt_help;
+GetOptions(
+    'a' => \$opt_attach,
+    'd' => \$opt_detach,
+    'h' => \$opt_help,
+) or pod2usage(1);
+if ($opt_help) {
+    pod2usage(0);
+}
+
+unless (@ARGV) {
+    warn 'required PUBLIC_IP';
+    pod2usage(1);
+}
+my $public_ipaddr = shift @ARGV;
+
+if ($public_ipaddr eq '') {
+    pod2usage(0);
+}
+
+if ($opt_attach) {
+    my $data = get_metadata();
+    my $region = $data->{region};
+    my $instance_id = $data->{'instanceId'};
+    my @cmd = ('aws', '--region', $region, 'ec2', 'associate-address', '--public-ip', $public_ipaddr, '--instance-id', $instance_id);
+    my $ret = cmd_with_retry3(@cmd);
+    if ($ret != 0) {
+        die "faild to associate-address $public_ipaddr to $instance_id\n";
+    }
+} elsif ($opt_detach) {
+    my $data = get_metadata();
+    my $region = $data->{region};
+    my $ret = cmd_with_retry3('aws', '--region', $region, 'ec2', 'disassociate-address', '--public-ip', $public_ipaddr);
+    if ($ret != 0) {
+        die "faild to disassociate $public_ipaddr\n";
+    }
+} else {
+    pod2usage(0);
+}
+
+
+__END__
+
+=head1 NAME
+
+eip_failover - AWS EIP failover script
+
+=head1 SYNOPSIS
+
+    eip_failover -a PUBLIC_IP # attach
+    eip_failover -d PUBLIC_IP # detach
+
+    $ eip_failover -a 93.184.216.34
+    $ eip_failover -d 93.184.216.34
+
+=head1 DESCRIPTION
+
+eip_failover switches AWS Elastic IP Addresses.
+
+=head1 AUTHOR
+
+Yuuki Tsubouchi (y_uuki)
+
+=cut
