@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+import argparse
+import concurrent.futures
+import multiprocessing
+import subprocess
+import sys
+
+def rsync(sources, dest):
+    cmd = f"exec: rsync -avhz {sources} {dest}"
+    print(cmd, file=sys.stderr)
+    subprocess.run(f"rsync -avhz {sources} {dest}", shell=True)
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("sources", nargs="+", type=str, help="sources")
+    parser.add_argument("-d", "--destinations", nargs='+', type=str, help="destinations", required=True)
+    parser.add_argument("-P", "--processes", type=int, default=multiprocessing.cpu_count(), help="number of processes")
+    args = parser.parse_args()
+
+    sources = ' '.join(args.sources)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=args.processes) as executor:
+        for dest in args.destinations:
+            executor.submit(rsync, sources, dest)
+
+if __name__ == '__main__':
+    main()
