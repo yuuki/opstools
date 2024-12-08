@@ -1,0 +1,21 @@
+#!/bin/bash
+
+location="$1"
+if [ "$location" = "" ]; then
+  echo "usage: $0 <host:path>"
+  exit 1
+fi
+
+host=${location%%:*}
+dir=${location##*:}
+if [ "$host" = "$dir" ]; then
+  dir=""
+fi
+
+home=""
+if [ "$dir" = "" -o "${dir:0:1}" != "/" ]; then
+  home="$(ssh $host pwd)/"
+fi
+
+path="$home$dir"
+code --folder-uri "vscode-remote://ssh-remote+$host$path"
