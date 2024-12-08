@@ -9,7 +9,7 @@ import sys
 def rsync(sources, dest):
     cmd = f"exec: rsync -avhz {sources} {dest}"
     print(cmd, file=sys.stderr)
-    subprocess.run(f"rsync -avhz {sources} {dest}", shell=True)
+    subprocess.run(f"rsync -avhz \"{sources}\" {dest}", shell=True)
 
 def main():
     parser = argparse.ArgumentParser()
